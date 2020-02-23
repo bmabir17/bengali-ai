@@ -16,6 +16,7 @@ kaggle competitions download -c bengaliai-cv19
     conda install -c conda-forge pyarrow tqdm imgaug
     conda install albumentations -c albumentations
     conda install pytorch torchvision cpuonly -c pytorch
+    pip install pretrainedmodels
 
 # Reference
 https://www.youtube.com/watch?v=8J5Q4mEzRtY
