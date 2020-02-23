@@ -1,0 +1,23 @@
+*.pkl
+*.bin
+trained/
+trained/*.bin
+trained/*.pkl
+input/
+*.csv
+*.parquet
+*.npy
+
+# Byte-compiled / optimied / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+
+# C extensions
+*.so
+
+# Distrubution /packaging
+.Python
+env/
+build/
