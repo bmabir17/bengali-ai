@@ -134,4 +134,5 @@ dependencies:
   - pip:
     - munch==2.5.0
     - pretrainedmodels==0.7.4
+prefix: /home/bmabir/miniconda3/envs/bengali-ai
 
