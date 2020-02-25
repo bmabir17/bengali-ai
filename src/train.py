@@ -5,9 +5,9 @@ from dataset import BengaliDatasetTrain
 import torch
 import torch.nn as nn
 from tqdm import tqdm
+import datetime
 
-
-DEVICE = "cpu"
+DEVICE = "cuda"
 TRAINING_FOLDS_CSV = os.environ.get("TRAINING_FOLDS_CSV")
 
 IMG_HEIGHT = int(os.environ.get("IMG_HEIGHT"))
@@ -71,11 +71,11 @@ def evaluate(dataset,data_loader,model):
         grapheme_root = grapheme_root.to(DEVICE,dtype=torch.long)
         vowel_diacritic = vowel_diacritic.to(DEVICE,dtype=torch.long)
         consonant_diacritic = consonant_diacritic.to(DEVICE,dtype=torch.long)
-
-        outputs = model(image)
-        targets = (grapheme_root,vowel_diacritic,consonant_diacritic)
-        loss=loss_fn(outputs,targets)
-        final_loss += loss
+        with torch.no_grad():
+            outputs = model(image)
+            targets = (grapheme_root,vowel_diacritic,consonant_diacritic)
+            loss=loss_fn(outputs,targets)
+            final_loss += loss
     return final_loss / counter
 
 
@@ -120,13 +120,18 @@ def main():
     if torch.cuda.device_count() > 1 :
         model = nn.DataParallel(model)
     
-
+    os.makedirs("../input/bengali_models/", exist_ok=True)
+    logFile= open("../input/bengali_models/validation_log.txt","a")
+    logFile.write(f"Run Time: {str(datetime.datetime.now())}")
     #****** can also add Early stopping https://github.com/Bjarten/early-stopping-pytorch
     for epoch in range(EPOCHS):
         train(train_dataset,train_loader,model, optimizer)
         val_score= evaluate(valid_dataset,valid_loader,model)
         schedular.step(val_score)
-        torch.save(model.state_dict(),f"{BASE_MODEL}_fold{VALIDATION_FOLDS[0]}.bin")
-
+        print(f"{epoch} Epoch Validation Score: {val_score}")
+        logFile.write(f"{BASE_MODEL}_fold{VALIDATION_FOLDS[0]}_{epoch} Epoch Validation Score: {val_score}")
+        torch.save(model.state_dict(),f"../input/bengali_models/{BASE_MODEL}_fold{VALIDATION_FOLDS[0]}.bin")
+    
+    logFile.close()
 if __name__ == "__main__":
     main()
