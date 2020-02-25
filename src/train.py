@@ -122,7 +122,7 @@ def main():
     
     os.makedirs("../input/bengali_models/", exist_ok=True)
     logFile= open("../input/bengali_models/validation_log.txt","a")
-    logFile.write(f"Run Time: {str(datetime.datetime.now())}")
+    logFile.write(f"\n Run Time: {str(datetime.datetime.now())}")
     #****** can also add Early stopping https://github.com/Bjarten/early-stopping-pytorch
     for epoch in range(EPOCHS):
         train(train_dataset,train_loader,model, optimizer)
