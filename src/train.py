@@ -1,3 +1,4 @@
+#!/home/bmabir/miniconda/envs/bengali-ai-gpu/bin/python
 import os
 import ast
 from model_dispatcher import MODEL_DISPATCHER
@@ -6,6 +7,7 @@ import torch
 import torch.nn as nn
 from tqdm import tqdm
 import datetime
+import numpy as np
 
 DEVICE = "cuda"
 TRAINING_FOLDS_CSV = os.environ.get("TRAINING_FOLDS_CSV")
@@ -24,6 +26,15 @@ TRAINING_FOLDS = ast.literal_eval(os.environ.get("TRAINING_FOLDS"))
 VALIDATION_FOLDS = ast.literal_eval(os.environ.get("VALIDATION_FOLDS"))
 BASE_MODEL = os.environ.get("BASE_MODEL")
 
+# to track the training loss as the model trains
+train_losses = []
+# to track the validation loss as the model trains
+# valid_losses = []
+# to track the average training loss per epoch as the model trains
+avg_train_losses = []
+# to track the average validation loss per epoch as the model trains
+# avg_valid_losses = [] 
+
 #**********experiment with different types of loss functions
 def loss_fn(outputs,targets):
     out1, out2, out3 = outputs
@@ -36,6 +47,7 @@ def loss_fn(outputs,targets):
 def train(dataset,data_loader,model,optimizer):
     model.train()
 
+    global train_losses
     for batch_index, dataSet in tqdm(enumerate(data_loader),total=int(len(dataset)/data_loader.batch_size)):
         image = dataSet["image"]
         grapheme_root = dataSet["grapheme_root"]
@@ -54,6 +66,9 @@ def train(dataset,data_loader,model,optimizer):
 
         loss.backward()
         optimizer.step()
+        #record training loss
+        train_losses.append(loss.item())
+    # return train_losses
 
 def evaluate(dataset,data_loader,model):
     model.eval()
@@ -80,6 +95,8 @@ def evaluate(dataset,data_loader,model):
 
 
 def main():
+    global avg_train_losses
+    print(f"Training with {BASE_MODEL}")
     model = MODEL_DISPATCHER[BASE_MODEL](pretrained=True)
     model.to(DEVICE)
 
@@ -127,9 +144,13 @@ def main():
     for epoch in range(EPOCHS):
         train(train_dataset,train_loader,model, optimizer)
         val_score= evaluate(valid_dataset,valid_loader,model)
+
+        avg_train_loss = np.average(train_losses)
+        avg_train_losses.append(avg_train_loss)
+
         schedular.step(val_score)
-        print(f"{epoch} Epoch Validation Score: {val_score}")
-        logFile.write(f"{BASE_MODEL}_fold{VALIDATION_FOLDS[0]}_{epoch} Epoch Validation Score: {val_score}")
+        print(f"{epoch} Epoch Validation Score: {val_score} avg train loss:{avg_train_loss}")
+        logFile.write(f" {BASE_MODEL}_fold{VALIDATION_FOLDS[0]}_{epoch} Epoch Validation Score: {val_score} avg train loss:{avg_train_loss} ")
         torch.save(model.state_dict(),f"../input/bengali_models/{BASE_MODEL}_fold{VALIDATION_FOLDS[0]}.bin")
     
     logFile.close()
