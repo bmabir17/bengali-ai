@@ -8,6 +8,7 @@ import torch.nn as nn
 from tqdm import tqdm
 import datetime
 import numpy as np
+from metrics import ArcMarginProduct, AddMarginProduct, SphereProduct, MerginFC
 
 DEVICE = "cuda"
 TRAINING_FOLDS_CSV = os.environ.get("TRAINING_FOLDS_CSV")
@@ -35,6 +36,24 @@ avg_train_losses = []
 # to track the average validation loss per epoch as the model trains
 # avg_valid_losses = [] 
 
+
+metric_fc1 = MerginFC(
+            512,
+            168,
+            xface_product=AddMarginProduct,
+            m=0.5).cuda()
+metric_fc2 = MerginFC(
+            512,
+            11,
+            xface_product=AddMarginProduct,
+            m=0.5).cuda()
+metric_fc3 = MerginFC(
+            512,
+            7,
+            xface_product=AddMarginProduct,
+            m=0.5).cuda()
+
+
 #**********experiment with different types of loss functions
 def loss_fn(outputs,targets):
     out1, out2, out3 = outputs
@@ -43,6 +62,15 @@ def loss_fn(outputs,targets):
     loss2 = nn.CrossEntropyLoss()(out2, tartget2)
     loss3 = nn.CrossEntropyLoss()(out3, tartget3)
     return (loss1+loss2+loss3)/3
+
+def margin_feat(outputs,targets):
+    out1, out2, out3 = outputs
+    # print(out1.shape)
+    tartget1, tartget2,tartget3 = targets
+    feat1=metric_fc1(out1, tartget1)
+    feat2=metric_fc2(out2, tartget2)
+    feat3=metric_fc3(out3, tartget3)
+    return feat1,feat2,feat3
 
 def train(dataset,data_loader,model,optimizer):
     model.train()
@@ -62,6 +90,8 @@ def train(dataset,data_loader,model,optimizer):
         optimizer.zero_grad()
         outputs = model(image)
         targets = (grapheme_root,vowel_diacritic,consonant_diacritic)
+        if BASE_MODEL == "se_resnet50_margin":
+            outputs=margin_feat(outputs,targets)
         loss=loss_fn(outputs,targets)
 
         loss.backward()
